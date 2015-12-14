@@ -88,6 +88,7 @@ AC_CONFIG_FILES([
     contrib/Makefile
     contrib/gingers390x.spec.zkvm
     tests/Makefile
+    tests/fvt/Makefile
 ])
 
 AC_OUTPUT
