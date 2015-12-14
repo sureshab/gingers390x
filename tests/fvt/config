@@ -10,3 +10,9 @@ online_dasdeckd_device :
 offline_dasdeckd_device :
 online_zfcp_device :
 offline_zfcp_device : 
+
+[FCLUNs]
+hba_id : 
+remote_wwpn : 
+lun_id : 
+
