@@ -1,2 +1,6 @@
 [CIO_IGNORE]
-devices : [1, "10 - 90" , "0.1.1000"]
+devices : ["device_list"]
+
+[Network I/O Devices]
+configured_device :
+unconfigured_device : 
