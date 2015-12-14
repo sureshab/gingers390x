@@ -3,4 +3,10 @@ devices : ["device_list"]
 
 [Network I/O Devices]
 configured_device :
-unconfigured_device : 
+unconfigured_device :
+
+[Storage I/O Devices]
+online_dasdeckd_device :
+offline_dasdeckd_device :
+online_zfcp_device :
+offline_zfcp_device : 
