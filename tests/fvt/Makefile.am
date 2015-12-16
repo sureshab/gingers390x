@@ -18,25 +18,25 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
 
 EXTRA_DIST = \
-        Makefile.am \
-        run_tests.sh.in \
-        $(wildcard *.py) \
-        $(NULL)
+	Makefile.am \
+	run_tests.sh.in \
+	$(wildcard *.py) \
+	$(NULL)
 
 noinst_SCRIPTS = run_tests.sh
 
 do_substitution = \
-    sed -e 's,[@]HAVE_PYMOD_UNITTEST[@],$(HAVE_PYMOD_UNITTEST),g' \
-    -e 's,[@]PYTHON_VERSION[@],$(PYTHON_VERSION),g'
+	sed -e 's,[@]HAVE_PYMOD_UNITTEST[@],$(HAVE_PYMOD_UNITTEST),g' \
+	-e 's,[@]PYTHON_VERSION[@],$(PYTHON_VERSION),g'
 
 run_tests.sh: run_tests.sh.in Makefile
-    $(do_substitution) < $(srcdir)/run_tests.sh.in > run_tests.sh
-    chmod +x run_tests.sh
+	$(do_substitution) < $(srcdir)/run_tests.sh.in > run_tests.sh
+	chmod +x run_tests.sh
 
 check-local:
-    ./run_tests.sh
+	./run_tests.sh
 
 CLEANFILES = run_tests.sh
 
 clean-local:
-    rm -fr venv
+	rm -fr venv
