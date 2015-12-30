@@ -21,8 +21,8 @@ import ast
 import unittest
 
 import utils
-from tests.fvt.restapilib import APIRequestError
 from tests.fvt.fvt_base import TestBase
+from tests.fvt.restapilib import APIRequestError
 
 
 CONFIGFILE = 'config'
@@ -107,22 +107,26 @@ class TestCioIgnoreList(TestBase):
         uri_cio_ignore_remove = self.uri_cio_ignore + '/remove'
         self.logging.debug('Reading devices information from config file')
         if not self.remove_devices:
-            raise unittest.SkipTest('Skipping test_S002_remove_valid_devices() '
-                          'since removable devices are not provided in config file')
+            raise unittest.SkipTest(
+                'Skipping test_S002_remove_valid_devices() since '
+                'removable devices are not provided in config file')
         devices = ast.literal_eval(self.remove_devices)
         input_json = {"devices": devices}
         try:
-            self.logging.debug('Performing post operation remove on '
-                               'cio_ignore list with inpust json %s' % input_json)
-            resp = self.session.request_post_json(uri_cio_ignore_remove, body=input_json, expected_status_values=[200, 202])
+            self.logging.debug(
+                'Performing post operation remove on cio_ignore '
+                'list with inpust json %s' % input_json)
+            resp = self.session.request_post_json(
+                uri_cio_ignore_remove, body=input_json,
+                expected_status_values=[200, 202])
             if resp:
                 self.logging.debug('task json returned from cio_ignore remove'
                                    ': %s' % resp)
                 self.validator.validate_json(resp, self.task_schema)
                 self.logging.info('Waiting for task completion')
                 task_id = resp['id']
-                task_resp = utils.wait_task_status_change\
-                    (self.session, task_id, task_final_status='finished')
+                task_resp = utils.wait_task_status_change(
+                    self.session, task_id, task_final_status='finished')
                 self.validator.validate_json(task_resp, self.task_schema)
                 assert (task_resp['status'] == 'finished'),\
                     "remove task failed. task json response:" \
@@ -140,8 +144,8 @@ class TestCioIgnoreList(TestBase):
             self.logging.error(error.__str__())
             raise Exception(error)
         finally:
-            self.logging.info('<-- TestCioIgnoreList.test_S002_remove_valid_devices()')
-
+            self.logging.info(
+                '<-- TestCioIgnoreList.test_S002_remove_valid_devices()')
 
     def test_S003_remove_invalid_devices(self):
         """
@@ -149,7 +153,8 @@ class TestCioIgnoreList(TestBase):
         devices (includes list of invalid id for single device, invalid
         range and empty device id)
         """
-        self.logging.info('--> TestCioIgnoreList.test_S003_remove_invalid_devices()')
+        self.logging.info(
+            '--> TestCioIgnoreList.test_S003_remove_invalid_devices()')
 
         uri_cio_ignore_remove = self.uri_cio_ignore + '/remove'
         devices = ['invalid_device', '0.1.0900-0.0.0001', '  ']
@@ -158,20 +163,26 @@ class TestCioIgnoreList(TestBase):
 
         input_json = {"devices": devices}
         try:
-            self.logging.debug('Performing post operation remove on '
-                               'cio_ignore list with input json %s' % input_json)
-            resp = self.session.request_post_json(uri_cio_ignore_remove, body=input_json, expected_status_values=[200, 202])
+            self.logging.debug(
+                'Performing post operation remove on cio_ignore '
+                'list with input json %s' % input_json)
+            resp = self.session.request_post_json(
+                uri_cio_ignore_remove, body=input_json,
+                expected_status_values=[200, 202])
             if resp:
                 self.logging.debug('task json returned from cio_ignore remove'
                                    ': %s' % resp)
                 self.validator.validate_json(resp, self.task_schema)
                 task_id = resp['id']
-                task_resp = utils.wait_task_status_change(self.session, task_id, task_final_status='failed')
+                task_resp = utils.wait_task_status_change(
+                    self.session, task_id, task_final_status='failed')
                 self.validator.validate_json(task_resp, self.task_schema)
                 assert (task_resp['status'] == 'failed'),\
                     "remove task which was expected to fail, finished" \
                     " successfully. task json response: %s" % task_resp
-                self.logging.debug('As expected, failed to remove invalid devices. Task response %s' % task_resp)
+                self.logging.debug(
+                    'As expected, failed to remove invalid devices. '
+                    'Task response %s' % task_resp)
             else:
                 self.logging.info('Remove action on /cio_ignore returned'
                                   ' None/Empty response instead of task json')
@@ -182,7 +193,8 @@ class TestCioIgnoreList(TestBase):
             self.logging.error(error.__str__())
             raise Exception(error)
         finally:
-            self.logging.info('<-- TestCioIgnoreList.test_S003_remove_invalid_devices()')
+            self.logging.info(
+                '<-- TestCioIgnoreList.test_S003_remove_invalid_devices()')
 
     def test_S004_remove_valid_and_invalid_devices(self):
         """
@@ -191,7 +203,9 @@ class TestCioIgnoreList(TestBase):
         invalid devices includes list of invalid id for single device, invalid
         range and empty device id
         """
-        self.logging.info('--> TestCioIgnoreList.test_S004_remove_valid_and_invalid_devices()')
+        self.logging.info(
+            '--> TestCioIgnoreList.test_S004_remove_valid_'
+            'and_invalid_devices()')
 
         uri_cio_ignore_remove = self.uri_cio_ignore + '/remove'
         if not self.remove_devices:
@@ -205,20 +219,25 @@ class TestCioIgnoreList(TestBase):
 
         input_json = {"devices": devices}
         try:
-            self.logging.debug('Performing post operation remove on '
-                               'cio_ignore list with input json %s' % input_json)
-            resp = self.session.request_post_json(uri_cio_ignore_remove, body=input_json, expected_status_values=[200, 202])
+            self.logging.debug(
+                'Performing post operation remove on cio_ignore '
+                'list with input json %s' % input_json)
+            resp = self.session.request_post_json(
+                uri_cio_ignore_remove, body=input_json,
+                expected_status_values=[200, 202])
             if resp:
                 self.logging.debug('task json returned from cio_ignore remove'
                                    ': %s' % resp)
                 self.validator.validate_json(resp, self.task_schema)
                 task_id = resp['id']
-                task_resp = utils.wait_task_status_change(self.session, task_id, task_final_status='failed')
+                task_resp = utils.wait_task_status_change(
+                    self.session, task_id, task_final_status='failed')
                 self.validator.validate_json(task_resp, self.task_schema)
                 assert (task_resp['status'] == 'failed'),\
                     "remove task which was expected to fail, finished" \
                     " successfully. task json response: %s" % task_resp
-                self.logging.debug('Result is as expected. Task response %s' % task_resp)
+                self.logging.debug(
+                    'Result is as expected. Task response %s' % task_resp)
             else:
                 self.logging.info('Remove action on /cio_ignore returned'
                                   ' None/Empty response instead of task json')
@@ -229,7 +248,9 @@ class TestCioIgnoreList(TestBase):
             self.logging.error(error.__str__())
             raise Exception(error)
         finally:
-            self.logging.info('<-- TestCioIgnoreList.test_S004_remove_valid_and_invalid_devices()')
+            self.logging.info(
+                '<-- TestCioIgnoreList.test_S004_remove_valid_'
+                'and_invalid_devices()')
 
     @classmethod
     def tearDownClass(self):
