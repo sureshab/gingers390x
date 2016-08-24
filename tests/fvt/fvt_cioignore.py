@@ -67,9 +67,13 @@ class TestCioIgnoreList(TestBase):
                            ' information from config file')
         self.remove_devices = utils.readconfig(
             self.session, CONFIGFILE, CIO_IGNORE_SECTION, DEVICES_OPT)
+        self.remove_devices = ast.literal_eval(self.remove_devices)
         self.logging.debug(
-            'Reading removable devices(from ignore list) information from'
-            ' config file. Devices: %s' % self.remove_devices)
+            'Removable devices(from ignore list) information from'
+            ' config file: %s' % self.remove_devices)
+        self.logging.debug(
+            'Call to utils.addto_ignore_list() to preconfigure devices')
+        self.remove_devices = utils.addto_ignore_list(self.session, self.remove_devices)
         self.logging.info('<-- TestCioIgnoreList.setUpClass()')
 
     def test_S001_cio_ignore_list(self):
@@ -110,8 +114,7 @@ class TestCioIgnoreList(TestBase):
             raise unittest.SkipTest(
                 'Skipping test_S002_remove_valid_devices() since '
                 'removable devices are not provided in config file')
-        devices = ast.literal_eval(self.remove_devices)
-        input_json = {"devices": devices}
+        input_json = {"devices": self.remove_devices}
         try:
             self.logging.debug(
                 'Performing post operation remove on cio_ignore '
@@ -133,7 +136,7 @@ class TestCioIgnoreList(TestBase):
                     " %s" % task_resp
                 self.logging.debug('Successfully removed devices %s from '
                                    'ignore list. Task response: %s'
-                                   % (devices, task_resp))
+                                   % (self.remove_devices, task_resp))
             else:
                 self.logging.info('Remove action on /cio_ignore returned'
                                   ' None/Empty response instead of task json')
@@ -212,10 +215,10 @@ class TestCioIgnoreList(TestBase):
             raise unittest.SkipTest(
                 'Skipping test_S004_remove_valid_and_invalid_devices() since'
                 ' removable devices are not provided in config file')
-        devices = ast.literal_eval(self.remove_devices)
-        devices.extend(['invalid_device', '0.1.0900-0.0.0001', '  '])
-        # appending invalid devices list which composes of invalid device id,
-        #  invalid range and empty device id
+        devices = ['invalid_device', '0.1.0900-0.0.0001', '  ']
+        devices.extend(self.remove_devices)
+        # appending valid devices to invalid devices list which composes
+        # of invalid device id, invalid range and empty device id
 
         input_json = {"devices": devices}
         try:
@@ -258,4 +261,8 @@ class TestCioIgnoreList(TestBase):
         clean up
         :return:
         """
-        pass
+        self.logging.info('--> TestCioIgnoreList.tearDownClass()')
+        self.logging.debug('Call utils.remove_from_ignore_list() to clean up')
+        if self.remove_devices:
+            utils.remove_from_ignore_list(self.session, self.remove_devices)
+        self.logging.info('<-- TestCioIgnoreList.tearDownClass()')

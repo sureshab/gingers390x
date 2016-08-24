@@ -91,6 +91,15 @@ class TestNwdevices(TestBase):
             'Successfully read network i/o devices information from config'
             ' file. Configured Device: %s, Un-Configured Device: %s'
             % (self.configured_device, self.unconfigured_device))
+        self.logging.debug('prepare network device using utils')
+        if utils.configure_nwdevice(self.session, self.configured_device):
+            #if failed to configure network device, make it None
+            self.configured_device = None
+        else:
+            # if successfully configured, use first device id of triplet
+            self.configured_device = 'enccw' + self.configured_device.split(',')[0]
+        if self.unconfigured_device:
+            self.unconfigured_device = self.unconfigured_device.split(',')[0]
         self.logging.info('<-- TestNwdevices.setUpClass()')
 
     def test_S001_nwdevices_collection(self):
@@ -571,3 +580,18 @@ class TestNwdevices(TestBase):
         finally:
             self.logging.info(
                 '<-- TestNwdevices.test_F012_unconfigure_invalid_nwdevice()')
+
+    @classmethod
+    def tearDownClass(self):
+        """
+        clean up
+        :return:
+        """
+        self.logging.info('--> TestNwdevices.tearDownClass()')
+        self.logging.debug('unconfigure network device')
+        if self.configured_device:
+            # strip enccw since  enccw is appended in setUpClass
+            utils.unconfigure_nwdevice(self.session, self.configured_device.lstrip('enccw'))
+        if self.unconfigured_device:
+            utils.unconfigure_nwdevice(self.session, self.unconfigured_device)
+        self.logging.info('<-- TestNwdevices.tearDownClass()')

@@ -2,6 +2,8 @@
 devices : ["device_list"]
 
 [Network I/O Devices]
+# enter network device triple
+# example 0.0.1500,0.0.1501,1502 as report from "znetconf  -u" command
 configured_device :
 unconfigured_device :
 

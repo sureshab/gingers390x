@@ -86,6 +86,19 @@ class TestStorageIODevices(TestBase):
             '%s, online zfcp device: %s, offline zfcp device: %s'
             % (self.online_dasdeckd_device, self.offline_dasdeckd_device,
                self.online_zfcp_device, self.offline_zfcp_device))
+        self.logging.debug('configure eckd and fcp devices')
+        if utils.bring_eckd_online(self.session, self.online_dasdeckd_device):
+            # if failed to bring device online, make it None
+            self.online_dasdeckd_device = None
+        if utils.bring_eckd_offline(
+                self.session, self.offline_dasdeckd_device):
+            # if failed to bring device offline, make it None
+            self.offline_dasdeckd_device = None
+        if utils.bring_zfcp_online(self.session,  self.online_zfcp_device):
+            # if failed to bring device online, make it None
+            self.online_zfcp_device = None
+        if utils.bring_zfcp_online(self.session, self.offline_zfcp_device):
+            self.offline_zfcp_device =None
         self.logging.info('<-- TestStorageIODevices.setUpClass()()')
 
     def test_S001_retrieve_all_storagedevices(self):
@@ -672,3 +685,21 @@ class TestStorageIODevices(TestBase):
         finally:
             self.logging.info(
                 '<--TestStorageIODevices.test_F014_invalid_offline()')
+
+    @classmethod
+    def tearDownClass(self):
+        """
+        clean up
+        :return:
+        """
+        self.logging.info('--> TestStorageIODevices.tearDownClass()')
+        self.logging.debug('unconfigure eckd and fcp devices')
+        if self.online_dasdeckd_device:
+            utils.bring_eckd_offline(self.session, self.online_dasdeckd_device)
+        if self.offline_dasdeckd_device:
+            utils.bring_eckd_offline(self.session, self.offline_dasdeckd_device)
+        if self.online_zfcp_device:
+            utils.bring_zfcp_offline(self.session, self.online_zfcp_device)
+        if self.offline_zfcp_device:
+            utils.bring_zfcp_offline(self.session, self.offline_zfcp_device)
+        self.logging.info('<-- TestStorageIODevices.tearDownClass()')
