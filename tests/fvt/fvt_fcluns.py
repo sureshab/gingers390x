@@ -8,7 +8,7 @@ class TestFCLuns(TestBase):
                       "properties": {"status": {"type": "string"},
                                      "product": {"type": "string"},
                                      "vendor": {"type": "string"},
-                                     "configured": {"type": "boolean"},
+                                     "configured": {"type": "string"},
                                      "hbaId": {"type": "string"},
                                      "remoteWwpn": {"type": "string"},
                                      "controllerSN": {"type": "string"},
@@ -18,6 +18,21 @@ class TestFCLuns(TestBase):
                       }
     uri_fcluns = '/plugins/gingers390x/fcluns'
 
+
+    @classmethod
+    def setUpClass(self):
+        super(TestFCLuns, self).setUpClass()
+        self.logging.info('--> TestFCLuns.setUpClass()')
+        self.logging.debug('enable the fcp adapter '
+                           'specified in config file')
+        self.hba_id = utils.readconfig(self, 'config', 'FCLUNs', 'hba_id')
+        try:
+            utils.bring_zfcp_online(self.session, self.hba_id)
+        except Exception, err:
+            self.logging.error(str(err))
+            raise Exception(str(err))
+        finally:
+            self.logging.info('<-- TestFCLun.setUpClass()')
 
     def test_f001_add_lun_with_hbaId_missing(self):
         """
@@ -121,5 +136,15 @@ class TestFCLuns(TestBase):
             self.logging.error(str(err))
             raise Exception(str(err))
         finally:
-            self.logging.info('<-- TestPhysicalVols.test_delete_pv()')
+            self.logging.info('<-- TestFCLuns.test_delete_pv()')
 
+    @classmethod
+    def tearDownClass(self):
+        """
+        clean up
+        :return:
+        """
+        self.logging.info('--> TestFCLuns.tearDownClass()')
+        self.logging.debug('disable the hba added in setup class')
+        utils.bring_zfcp_offline(self.session, self.hba_id)
+        self.logging.info('<-- TestFCLuns.tearDownClass()')
