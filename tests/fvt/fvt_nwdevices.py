@@ -28,6 +28,11 @@ CONFIGFILE = 'config'
 NWDEVICES_SECTION = 'Network I/O Devices'
 CONFIGURED_DEVICE_OPT = 'configured_device'
 UNCONFIGURED_DEVICE_OPT = 'unconfigured_device'
+UNCONFIGURED_OSA_DEVICE_OPT = 'unconfigure_device_osaport'
+
+# variable to skip updation of osaport based on success/failure
+# of configuring unconfigured_osa_device
+skip_osaport_update = True
 
 
 class TestNwdevices(TestBase):
@@ -59,7 +64,8 @@ class TestNwdevices(TestBase):
                                       "card_type": {"type": "string"},
                                       "state": {"type": "string"},
                                       "device_ids": {"type": "array"},
-                                      "type": {"type": "string"}
+                                      "type": {"type": "string"},
+                                      "osa_portno": {"type": ["string", "integer"]}
                                       }
                        }
     # POST action configure/unconfigure api returns a task resource
@@ -74,6 +80,7 @@ class TestNwdevices(TestBase):
     uri_task = '/plugins/gingers390x/tasks'
     configured_device = None
     unconfigured_device = None
+    unconfigured_osa_device = None
 
     @classmethod
     def setUpClass(self):
@@ -87,6 +94,9 @@ class TestNwdevices(TestBase):
         self.unconfigured_device = utils.readconfig(
             self.session, CONFIGFILE, NWDEVICES_SECTION,
             UNCONFIGURED_DEVICE_OPT)
+        self.unconfigured_osa_device = utils.readconfig(
+            self.session, CONFIGFILE, NWDEVICES_SECTION,
+            UNCONFIGURED_OSA_DEVICE_OPT)
         self.logging.debug(
             'Successfully read network i/o devices information from config'
             ' file. Configured Device: %s, Un-Configured Device: %s'
@@ -581,6 +591,239 @@ class TestNwdevices(TestBase):
             self.logging.info(
                 '<-- TestNwdevices.test_F012_unconfigure_invalid_nwdevice()')
 
+    def test_S013_configure_nwdevice_with_osaport(self):
+        """
+        method to test "configure" action of /nwdevices/<device> api to
+        configure valid network i/o device with osa port 1
+        """
+        self.logging.info(
+            '--> TestNwdevices.test_S013_configure_nwdevice_with_osaport()')
+        global skip_osaport_update
+        if not self.unconfigured_osa_device:
+            raise unittest.SkipTest(
+                'Skipping test_S013_configure_nwdevice_with_osaport() since '
+                'un-configured device which can be used for osa port test is'
+                ' not specified in config file')
+        uri_configure_device = self.uri_nwdevices + '/' +\
+                               self.unconfigured_osa_device + '/configure'
+        input_json = {'osa_portno': 1}
+        try:
+            self.logging.debug(
+                'Configuring un-configured network i/o device %s using uri'
+                ' %s with osa port 1' % (self.unconfigured_osa_device,
+                                         uri_configure_device))
+            resp = self.session.request_post_json(
+                uri_configure_device, body=input_json,
+                expected_status_values=[200, 202])
+            if resp:
+                self.logging.debug(
+                    'task json returned from configure network i/o '
+                    'device: %s' % resp)
+                self.validator.validate_json(resp, self.task_schema)
+                task_id = resp['id']
+                task_resp = utils.wait_task_status_change(
+                    self.session, task_id, task_final_status='finished')
+                self.validator.validate_json(task_resp, self.task_schema)
+                assert (task_resp['status'] == 'finished'),\
+                    "configure task failed. task json response: " \
+                    "%s" % task_resp
+                self.logging.info('Retrieving device information '
+                                  'after configure action')
+                conf_device = self.session.request_get_json(
+                    self.uri_nwdevices + '/enccw' +
+                    self.unconfigured_osa_device, expected_status_values=[200])
+                self.validator.validate_json(
+                    conf_device, self.nwdevice_schema)
+                if conf_device['state'] == 'Unconfigured':
+                    self.fail(
+                        'Device is not configured through configure action. '
+                        'Device details after configure action: %s'
+                        % conf_device)
+                skip_osaport_update = False  # execute osa port update tests
+                self.session.logging.debug(
+                    'Device %s is configured successfully. Device details '
+                    '%s' % (self.unconfigured_osa_device, conf_device))
+
+            else:
+                self.logging.info(
+                    'configure action with osa port 1 on network i/o device '
+                    '%s returned None/Empty response instead of task json'
+                    % self.unconfigured_osa_device)
+                self.fail(
+                    'configure action with osa port 1 on network i/o device '
+                    '%s returned None/Empty response instead of task json'
+                    % self.unconfigured_osa_device)
+
+        except APIRequestError as error:
+            self.logging.error(error.__str__())
+            raise Exception(error)
+        finally:
+            self.logging.info(
+                '<-- TestNwdevices.test_S013_configure_nwdevice_with_osaport()')
+
+    @unittest.skipIf(skip_osaport_update,
+                     'since osa express network card is not configured. '
+                     'test_S013_configure_nwdevice_with_osaport() failed')
+    def test_S014_update_nwdevice_with_osaport0(self):
+        """
+        method to test "update" option of /nwdevices/<device> api to
+        update osa port number as 0
+        """
+        self.logging.info(
+            '--> TestNwdevices.test_S014_update_nwdevice_with_osaport0()')
+        if not self.unconfigured_osa_device:
+            raise unittest.SkipTest(
+                'Skipping test_S014_update_nwdevice_with_osaport0() since '
+                'un-configured device which can be used for osa port test is'
+                ' not specified in config file')
+        # after configuring unconfigured network i/o device in test case
+        # test_S013_configure_nwdevice_with_osaport
+        # interface name changes to 'enccw' + unconfigured_device_id
+        interface_name = 'enccw' + self.unconfigured_osa_device
+        uri_update_device = self.uri_nwdevices + '/' + interface_name
+        input_json = {'osa_portno': 0}
+        try:
+            self.logging.debug(
+                'Updating network i/o device %s with osa port 0 using uri'
+                ' %s with osa port 0' % (interface_name,
+                                         uri_update_device))
+            resp = self.session.request_put_json(
+                uri_update_device, body=input_json,
+                expected_status_values=[200])
+            if resp:
+                self.logging.debug(
+                    'validating response json %s with default schema of '
+                    'network i/o device %s' % (resp, self.nwdevice_schema))
+                self.validator.validate_json(
+                    resp, self.nwdevice_schema)
+                if resp['osa_portno'] != 0:
+                    self.fail(
+                        'OSA port number is not updated to zero through '
+                        'update api. Device details after update action: %s'
+                        % resp)
+                self.session.logging.debug(
+                    'Device %s is successfully updated with osa_port number '
+                    '0. Device details %s' % (interface_name, resp))
+            else:
+                self.logging.info(
+                    'update action with osa port 0 on network i/o device '
+                    '%s returned None/Empty response' % interface_name)
+                self.fail(
+                    'update action with osa port 0 on network i/o device '
+                    '%s returned None/Empty response' % interface_name)
+
+        except APIRequestError as error:
+            self.logging.error(error.__str__())
+            raise Exception(error)
+        finally:
+            self.logging.info(
+                '<-- TestNwdevices.test_S014_update_nwdevice_with_osaport0()')
+
+    @unittest.skipIf(skip_osaport_update,
+                     'since osa express network card is not configured. '
+                     'test_S013_configure_nwdevice_with_osaport() failed')
+    def test_S015_update_nwdevice_with_osaport1(self):
+        """
+        method to test "update" option of /nwdevices/<device> api to
+        update osa port number as 1
+        """
+        self.logging.info(
+            '--> TestNwdevices.test_S015_update_nwdevice_with_osaport1()')
+        if not self.unconfigured_osa_device:
+            raise unittest.SkipTest(
+                'Skipping test_S015_update_nwdevice_with_osaport1() since '
+                'un-configured device which can be used for osa port test is'
+                ' not specified in config file')
+        # after configuring unconfigured network i/o device in test case
+        # test_S013_configure_nwdevice_with_osaport
+        # interface name changes to 'enccw' + unconfigured_device_id
+        interface_name = 'enccw' + self.unconfigured_osa_device
+        uri_update_device = self.uri_nwdevices + '/' + interface_name
+        input_json = {'osa_portno': 1}
+        try:
+            self.logging.debug(
+                'Updating network i/o device %s with osa port 0 using uri'
+                ' %s with osa port 1' % (interface_name,
+                                         uri_update_device))
+            resp = self.session.request_put_json(
+                uri_update_device, body=input_json,
+                expected_status_values=[200])
+            if resp:
+                self.logging.debug(
+                    'validating response json %s with default schema of '
+                    'network i/o device %s' % (resp, self.nwdevice_schema))
+                self.validator.validate_json(
+                    resp, self.nwdevice_schema)
+                if resp['osa_portno'] != 1:
+                    self.fail(
+                        'OSA port number is not updated to 1, through '
+                        'update api. Device details after update action: %s'
+                        % resp)
+                self.session.logging.debug(
+                    'Device %s is successfully updated with osa_port number '
+                    '1. Device details %s' % (interface_name, resp))
+            else:
+                self.logging.info(
+                    'update action with osa port 1 on network i/o device '
+                    '%s returned None/Empty response' % interface_name)
+                self.fail(
+                    'update action with osa port 1 on network i/o device '
+                    '%s returned None/Empty response' % interface_name)
+
+        except APIRequestError as error:
+            self.logging.error(error.__str__())
+            raise Exception(error)
+        finally:
+            self.logging.info(
+                '<-- TestNwdevices.test_S015_update_nwdevice_with_osaport1()')
+
+    @unittest.skipIf(skip_osaport_update,
+                     'since osa express network card is not configured. '
+                     'test_S013_configure_nwdevice_with_osaport() failed')
+    def test_S016_update_nwdevice_with_invalid_osaport(self):
+        """
+        negative scenario to test "update" option of /nwdevices/<device> api
+        to update osa port number other than 0/1
+        this test should be called after test case -
+        test_S013_configure_nwdevice_with_osaport,,, so keeping S016 in name
+        """
+        self.logging.info(
+            '--> TestNwdevices.test_S016_update_nwdevice_with_invalid_osaport()')
+        if not self.unconfigured_osa_device:
+            raise unittest.SkipTest(
+                'Skipping test_S016_update_nwdevice_with_invalid_osaport() since '
+                'un-configured device which can be used for osa port test is'
+                ' not specified in config file')
+        # after configuring unconfigured network i/o device in test case
+        # test_S013_configure_nwdevice_with_osaport
+        # interface name changes to 'enccw' + unconfigured_device_id
+        interface_name = 'enccw' + self.unconfigured_osa_device
+        uri_update_device = self.uri_nwdevices + '/' + interface_name
+        input_json = {'osa_portno': 4}
+        # osa port 4 is not available on any OSA Express card
+        try:
+            self.logging.debug(
+                'Negative test case - updating network i/o device %s with osa'
+                ' port 4 using uri %s with osa port 1'
+                % (interface_name, uri_update_device))
+            resp = self.session.request_put_json(
+                uri_update_device, body=input_json,
+                expected_status_values=[400])
+            if not resp:
+                self.logging.info(
+                    'update action with osa port 4 on network i/o device '
+                    '%s returned None/Empty response' % interface_name)
+                self.fail(
+                    'update action with osa port 1 on network i/o device '
+                    '%s returned None/Empty response' % interface_name)
+
+        except APIRequestError as error:
+            self.logging.error(error.__str__())
+            raise Exception(error)
+        finally:
+            self.logging.info(
+                '<-- TestNwdevices.test_S016_update_nwdevice_with_invalid_osaport()')
+
     @classmethod
     def tearDownClass(self):
         """
@@ -594,4 +837,6 @@ class TestNwdevices(TestBase):
             utils.unconfigure_nwdevice(self.session, self.configured_device.lstrip('enccw'))
         if self.unconfigured_device:
             utils.unconfigure_nwdevice(self.session, self.unconfigured_device)
+        if self.unconfigured_osa_device:
+            utils.unconfigure_nwdevice(self.session, self.unconfigured_osa_device)
         self.logging.info('<-- TestNwdevices.tearDownClass()')
